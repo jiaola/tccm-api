@@ -1,0 +1,324 @@
+openapi: 3.0.0
+info:
+  title: Value Set Service
+  description: Value Set Service
+  version: 1.0.0
+paths:
+  /valueset/$resolve:
+    get:
+      description: Returns a resolved value set
+      parameters:
+        - in: query
+          name: definition
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              uri:
+                type: string
+            minProperties: 1
+            maxProperties: 1
+            additionalProperties: false
+      responses:
+        '200':
+          description: Successfully resolved a value set definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolvedValueSet'
+
+  /valueset/definition/{valueSetDefinitionId}:
+    get:
+      description: Returns a value set description
+      parameters:
+        - in: path
+          name: valueSetDefinitionId
+          schema:
+            type: string
+          required: true
+          description: identifier of the value set definition
+
+      responses:
+        '200':
+          description: Successfully returned a list of valuesets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValueSetDefinition'
+
+components:
+  schemas:
+    EntityReference:
+      description: The URI, namespace/name (if known) and a list of code systems that make assertions about the entity.
+      properties:
+        about:
+          description: The external, permanant URI by which this entity is known.
+          type: string
+        code:
+          type: string
+        designation:
+          description: The preferred label for the entity in the context of the service
+          type: string
+        description:
+          description: A description or definition of the referenced entity determined by the service
+          type: string
+        href:
+          type: string
+        seeAlso:
+          type: array
+          items:
+            type: string
+
+    AssociatedEntitiesReference:
+      description: |-
+        The description of a set of entities that are associated with a referenced entity. This description names a
+        reference entity and an association predicate, which identifies a set of entities that are related to the
+        reference entity according to a given code system. The description can reference the direct targets of the
+        association (children), the direct sources of the association (parents), the transitive closure of the
+        association targets (descendants), the transitive closure of the association sources (ancestors) and can state
+        whether all intermediate nodes are included in the closure or just the leaf nodes.
+
+        Note that the terms “parent” and “children” are asserted in reference to the predicate itself. As an example, in
+        the association “arm subClassOf bodyPart,” the “parent” is arm and the “child” is bodyPart.
+      properties:
+        referencedEntity:
+          $ref: '#/components/schemas/EntityReference'
+
+    SpecificEntityList:
+      allOf:
+        - $ref: '#/components/schemas/EntityReferenceList'
+
+    EntityReferenceList:
+      description: A collection (set) of zero or more entity references that belong to the same scoping namespace
+      properties:
+        namespaceUri:
+          type: string
+        namespaceName:
+          type: string
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityReference'
+
+    CompleteValueSetReference:
+      description: |-
+        A reference to a value set that, when resolved, results in a set of entity references that are included in this
+        entry. An entry of this type can just name a value set, meaning that the specific definition is determined in the
+        resolve value set call, can name both a value set and value set definition, meaning that the specific definition
+        is always used in the resolution. It can also specify one or more code system versions to be used in the
+        resolution of the named value set.
+      properties:
+        valueSet:
+          $ref: '#/components/schemas/ValueSetReference'
+        valueSetDefinition:
+          $ref: '#/components/schemas/ValueSetDefinitionReference'
+        referenceCodeSystemVersion:
+          $ref: '#/components/schemas/CodeSystemVersionReference'
+
+    CodeSystemVersionReference:
+      title: CodeSystemVersionReference
+      description: |-
+        An entry that, when resolved, returns all of the active entity references in a given code system. This includes
+        all entity references that appear as the source of one or more statements in the code system, whether the
+        assertions are made directly by a version of the code system or indirectly by a version of a different code
+        system that is imported. Note that targets are not included to prevent codes from rdf, rdfs, owl, etc. being
+        included in this resolution set.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+        - type: object
+          properties:
+            codeSystem:
+              $ref: '#/components/schemas/CodeSystemReference'
+
+    CodeSystemReference:
+      title: CodeSystemReference
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+        - description: A reference to a code system or ontology.
+
+    PropertyQueryReference:
+      description: |-
+        A description of a set of entity references that are determined by applying a filter to the attribute(s) or
+        property(s) that appear in an EntityDescription in a specified code system.
+      properties:
+        codeSystem:
+          $ref: '#/components/schemas/CodeSystemReference'
+        codeSystemVersion:
+          $ref: '#/components/schemas/CodeSystemVersionReference'
+
+
+    CompleteCodeSystemReference:
+      title: CompleteCodeSystemReference
+      description: |-
+        An entry that, when resolved, returns all of the active entity references in a given code system. This includes
+        all entity references that appear as the source of one or more statements in the code system, whether the
+        assertions are made directly by a version of the code system or indirectly by a version of a different code
+        system that is imported. Note that targets are not included to prevent codes from rdf, rdfs, owl, etc. being
+        included in this resolution set.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+        - properties:
+            codeSystemVersion:
+              $ref: '#/components/schemas/CodeSystemVersionReference'
+
+
+    FormalDefinition:
+      description: A value set definition choice
+      properties:
+        associatedEntities:
+          $ref: '#/components/schemas/AssociatedEntitiesReference'
+        propertyQuery:
+          $ref: '#/components/schemas/PropertyQueryReference'
+        entityList:
+          $ref: '#/components/schemas/SpecificEntityList'
+        completeValueSet:
+          $ref: '#/components/schemas/CompleteValueSetReference'
+        completeCodeSystem:
+          $ref: '#/components/schemas/CompleteCodeSystemReference'
+        externalValueSetDefinition:
+          $ref: '#/components/schemas/ExternalValueSetDefinition'
+        valueSetDefinition:
+          $ref: '#/components/schemas/ValueSetDefinitionEntry'
+
+
+    FormatReference:
+      description: A reference to a particular way that information is encoded for storage or transmission.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+
+    LanguageReference:
+      description: A reference to a spoken or written human language.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+
+    OpaqueData:
+      description: |-
+        Opaque data is the equivalent of an ASN.1 External Type or the XML Schema anyType . An OpaqueData instance
+        may represent text with an optional spoken or written language code or a formal structure such as embedded HTML,
+        XML, or MIME encoded data. When a formal structure is included, its type should be specified in the format
+        attribute and, when the type is an XML variant, the corresponding schema (or DTD) should be included in the
+        schema parameter.
+
+        The OpaqueData data type must be encoded in such a way that the content can be represented by a character string.
+        Binary data is not permitted, although hyperlinks to binary data are.
+
+      properties:
+        format:
+          $ref: '#/components/schemas/FormatReference'
+        schema:
+          type: string
+        language:
+          $ref: '#/components/schemas/LanguageReference'
+        value:
+          type: string
+
+    ValueSetDefinitionReference:
+      description: |-
+        A reference to a set of rules for constructing a value set along with the corresponding value set if known.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+
+    ExternalValueSetDefinition:
+      description: |-
+        A definition of a value set whose format and semantics is specified outside of the core
+        TCCM specification. If a given CTTCCMS2 service recognizes the syntax and semantics of this definition, it may
+        call the appropriate process to resolve it. If the definition is not recognized, a TCCM service implementation
+        must not process the containing value set definition and, instead, return an error.
+      allOf:
+        - $ref: '#/components/schemas/OpaqueData'
+
+
+    VersionTagReference:
+      description:
+        A reference to a tag that can be assigned to versionable resources within the context of a service implementation.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+
+    ValueSetReference:
+      title: Value set reference
+      description: A reference to a named set of entity references.
+      allOf:
+        - $ref: '#/components/schemas/NameAndMeaningReference'
+
+    NameAndMeaningReference:
+      title: Name and meaning reference
+      description: |-
+        A NameAndMeaningReference consists of a local identifier that references a unique meaning within the context of
+        a given domain in a TCCM service instance and a globally unique URI that identifies the intended meaning of the
+        identifier.
+      properties:
+        name:
+          type: string
+          description: An identifier that uniquely names the reference within the context of the particular reference type.
+        synopsis:
+          description: A summary of the role and purpose of the actual reference
+          type: string
+        uri:
+          type: string
+        href:
+          type: string
+
+    ValueSetDefinitionEntry:
+      description: |-
+        An element of a value set definition that, when resolved yields a set of entity references that are to be included
+        in, excluded from or intersected with the set of elements that represent the full resolution of the definition.
+
+        Note that only ACTIVE entity references are included. INACTIVE entity references may never be considered for
+        inclusion or exclusion in the resolution of a value set definition.
+      properties:
+        include:
+          $ref: '#/components/schemas/FormalDefinition'
+        exclude:
+          $ref: '#/components/schemas/FormalDefinition'
+        intersect:
+          $ref: '#/components/schemas/FormalDefinition'
+
+    ValueSetDefinition:
+      title: ValueSetDefinition
+      description: |-
+        A ValueSetDefinition describes the rules that determine which entity references (value meanings) belong to a value
+        set at a given point in time. The definition of what belongs in a value set can evolve over time, and it is possible
+        for there to be multiple definitions active at any given point in time - perhaps one for a system in general use, a
+        second for a newer system, and a third for testing. A ValueSetDefinition may or may not identify a specific version
+        of a code system. The decision of which version is to be used depends on the context and needs of the community.
+        ValueSetDefinition and the supporting model has been designed to allow multiple variations on the “binding” of
+        definitions to value sets, code system versions to definitions, and the combination to concept domains.
+      properties:
+        definitionOf:
+          $ref: '#/components/schemas/ValueSetReference'
+        versionTag:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionTagReference'
+        entry:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValueSetDefinitionEntry'
+
+    ResolvedValueSetHeader:
+      title: ResolvedValueSetHeader
+      properties:
+        resolutionOf:
+          $ref: '#/components/schemas/ValueSetDefinitionReference'
+        resolvedUsingCodeSystem:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeSystemVersionReference'
+        includesResolvedValueSet:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolvedValueSetHeader'
+
+    ResolvedValueSet:
+      title: ResolvedValueSet
+      properties:
+        header:
+          $ref: '#/components/schemas/ResolvedValueSetHeader'
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/jiaola/TCCM/1.0.0
